@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saturn's Rings: Resonance Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        saturn: '#E4B45D',
+                        ring: '#E8DBC5',
+                        mimas: '#A8A8A8',
+                        gap: '#3A3A3A',
+                    }
+                }
+            }
+        }
+
+        // Check for dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold mb-4 text-primary">Spin-Orbit Resonances in Saturn's Rings</h1>
+            <p class="text-xl mb-4">A Cosmic Dance of Gravity and Chaos</p>
+        </header>
+
+        <div class="mb-10">
+            <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <h2 class="text-2xl font-bold mb-4">3D Saturn Rings Visualization</h2>
+                <p class="mb-4">Explore Saturn's ring system in 3D. Drag to rotate, scroll to zoom, and use the controls to highlight different resonance features.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label for="highlight3D" class="block mb-2">Highlight Feature:</label>
+                        <select id="highlight3D" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-base">
+                            <option value="none">None</option>
+                            <option value="cassini">Cassini Division (2:1 Mimas)</option>
+                            <option value="encke">Encke Gap (1:1 Pan)</option>
+                            <option value="keeler">Keeler Gap (1:1 Daphnis)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="showMoons" class="block mb-2">Show Moons:</label>
+                        <select id="showMoons" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-base">
+                            <option value="none">None</option>
+                            <option value="mimas">Mimas</option>
+                            <option value="all">All Major Moons</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="viewAngle" class="block mb-2">View Angle:</label>
+                        <select id="viewAngle" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-base">
+                            <option value="above">Above Rings (45°)</option>
+                            <option value="edge">Edge-on View</option>
+                            <option value="top">Top Down</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="showComposition" class="block mb-2">Ring Composition:</label>
+                        <select id="showComposition" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-base">
+                            <option value="standard">Standard View</option>
+                            <option value="composition">Show Composition</option>
+                            <option value="particles">Show Particles</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4 bg-gray-200 dark:bg-gray-700 p-3 rounded-lg composition-legend hidden" id="compositionLegend">
+                    <h3 class="font-bold mb-2">Ring Composition Legend:</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-blue-200 mr-2 rounded-sm"></div>
+                            <span>Water Ice (90-95%)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-gray-500 mr-2 rounded-sm"></div>
+                            <span>Silicates (1-2%)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-red-300 mr-2 rounded-sm"></div>
+                            <span>Organic Compounds (2-5%)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-gray-700 mr-2 rounded-sm"></div>
+                            <span>Iron Oxide (trace)</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs">
+                        <p>Particle sizes vary from μm dust to house-sized chunks, with different distributions in each ring.</p>
+                    </div>
+                </div>
+                
+                <div class="w-full h-[500px] bg-black rounded-lg relative overflow-hidden" id="saturnThreeContainer"></div>
+                
+                <div class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                    <p>Drag to rotate | Scroll to zoom | Double-click to reset view</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <div class="lg:col-span-2">
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md mb-8">
+                    <h2 class="text-2xl font-bold mb-4">Interactive Lindblad Resonance Simulator</h2>
+                    <p class="mb-4">This simulation shows how the 2:1 resonance with Mimas creates the Cassini Division. Adjust the parameters to see how resonances affect ring particles.</p>
+                    
+                    <div class="mb-4">
+                        <label for="resonanceStrength" class="block mb-2">Resonance Strength:</label>
+                        <input type="range" id="resonanceStrength" min="0" max="100" value="50" 
+                               class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="resonanceWidth" class="block mb-2">Resonance Width (km):</label>
+                        <input type="range" id="resonanceWidth" min="100" max="1000" value="500" 
+                               class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <div class="mb-6">
+                        <button id="runSimulation" class="bg-primary hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded">
+                            Run Simulation
+                        </button>
+                    </div>
+                    
+                    <div class="w-full h-[300px] relative">
+                        <canvas id="resonanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                    <h2 class="text-2xl font-bold mb-4">2D Ring Structure Visualizer</h2>
+                    <div class="mb-4">
+                        <label for="viewToggle" class="block mb-2">View:</label>
+                        <select id="viewToggle" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-base">
+                            <option value="full">Full Rings</option>
+                            <option value="cassini">Cassini Division</option>
+                            <option value="encke">Encke Gap</option>
+                        </select>
+                    </div>
+                    <div class="w-full h-[300px] bg-black rounded-full relative overflow-hidden" id="saturnContainer">
+                        <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[120px] h-[120px] bg-saturn rounded-full z-10" id="saturnPlanet"></div>
+                        <div id="ringsContainer" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-[90%]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                    <h2 class="text-2xl font-bold mb-4">Types of Resonances</h2>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-2 text-primary">Lindblad Resonance</h3>
+                        <p>Creates spiral density waves when a moon's gravity excites particles at specific orbital radii. Forms the Cassini Division.</p>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <p>Math: Ωp/(Ω - κ/m) = n/m</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-2 text-primary">Corotation Resonance</h3>
+                        <p>Creates "propeller" features where moonlets create S-shaped gaps in the rings.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-2 text-primary">Vertical Resonance</h3>
+                        <p>Moons tug ring particles out of the plane, creating warped rings.</p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                    <h2 class="text-2xl font-bold mb-4">Famous Examples</h2>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-300 dark:border-gray-700">
+                                <th class="text-left py-2">Feature</th>
+                                <th class="text-left py-2">Resonance</th>
+                                <th class="text-left py-2">Moon</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-300 dark:border-gray-700">
+                                <td class="py-2">Cassini Division</td>
+                                <td class="py-2">2:1</td>
+                                <td class="py-2">Mimas</td>
+                            </tr>
+                            <tr class="border-b border-gray-300 dark:border-gray-700">
+                                <td class="py-2">Encke Gap</td>
+                                <td class="py-2">1:1</td>
+                                <td class="py-2">Pan</td>
+                            </tr>
+                            <tr class="border-b border-gray-300 dark:border-gray-700">
+                                <td class="py-2">Daphnis' Waves</td>
+                                <td class="py-2">Corotation</td>
+                                <td class="py-2">Daphnis</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2">Janus/Epimetheus</td>
+                                <td class="py-2">1:1 Mutual</td>
+                                <td class="py-2">Janus/Epimetheus</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                    <h2 class="text-2xl font-bold mb-4">Thermodynamic Connection</h2>
+                    <p class="mb-3">Ring particles behave like gas molecules, with collisions damping eccentricities and inclinations.</p>
+                    <p class="mb-3">Resonances "heat" the rings (increasing chaos), while tidal friction "cools" them.</p>
+                    <ul class="list-disc pl-5">
+                        <li>Moon perturbations = "External forces" on particles</li>
+                        <li>Density waves = "Pressure waves" in a fluid</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md mb-8">
+            <h2 class="text-2xl font-bold mb-4">Why Saturn's Rings Are Flat</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-xl font-bold mb-2 text-primary">Collisional Cooling</h3>
+                    <p>Particles collide, dissipating energy vertically, settling into a thin plane.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-2 text-primary">Shepherd Moons</h3>
+                    <p>Moons like Prometheus and Pandora confine the edges of rings, such as the F ring.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+            <h2 class="text-2xl font-bold mb-4">Key Takeaway</h2>
+            <p class="text-lg">Saturn's rings are a thermodynamic playground where gravity, chaos, and order collide. Resonances act like selective filters, sculpting the rings into the structures we see—much like how Boltzmann's statistical mechanics governs particle distributions.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 3D SATURN VISUALIZATION USING THREE.JS
+            const container = document.getElementById('saturnThreeContainer');
+            let scene, camera, renderer, controls;
+            let saturn, rings = [], moons = {};
+            
+            // Constants for Saturn and rings (in arbitrary units)
+            const SATURN_RADIUS = 10;
+            const RING_INNER_RADIUS = 11.5;
+            const RING_OUTER_RADIUS = 22;
+            const RING_THICKNESS = 0.1;
+            
+            // Ring gap locations (measured from Saturn's center in units of Saturn's radius)
+            const RING_GAPS = {
+                cassini: {radius: 1.95 * SATURN_RADIUS, width: 0.3 * SATURN_RADIUS, name: "Cassini Division", resonance: "2:1 with Mimas"},
+                encke: {radius: 2.14 * SATURN_RADIUS, width: 0.05 * SATURN_RADIUS, name: "Encke Gap", resonance: "1:1 with Pan"},
+                keeler: {radius: 2.16 * SATURN_RADIUS, width: 0.02 * SATURN_RADIUS, name: "Keeler Gap", resonance: "1:1 with Daphnis"}
+            };
+            
+            // Moon data (position in Saturn radii, size relative to Saturn)
+            const MOON_DATA = {
+                mimas: {distance: 3.1 * SATURN_RADIUS, size: 0.05 * SATURN_RADIUS, color: 0xcccccc, period: 22},
+                enceladus: {distance: 4.0 * SATURN_RADIUS, size: 0.06 * SATURN_RADIUS, color: 0xffffff, period: 33},
+                tethys: {distance: 4.9 * SATURN_RADIUS, size: 0.13 * SATURN_RADIUS, color: 0xdddddd, period: 45},
+                dione: {distance: 6.3 * SATURN_RADIUS, size: 0.14 * SATURN_RADIUS, color: 0xeeeeee, period: 66},
+                rhea: {distance: 8.7 * SATURN_RADIUS, size: 0.20 * SATURN_RADIUS, color: 0xe5e5e5, period: 108},
+                titan: {distance: 20 * SATURN_RADIUS, size: 0.4 * SATURN_RADIUS, color: 0xe9b87c, period: 380}
+            };
+            
+            // Create a procedural Saturn texture (simplified)
+            function createSaturnTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                
+                // Base color
+                ctx.fillStyle = '#E4B45D';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Bands
+                const bands = [
+                    {y: 100, height: 50, color: '#D4A44D'},
+                    {y: 230, height: 60, color: '#F4C46D'},
+                    {y: 350, height: 40, color: '#D4A44D'}
+                ];
+                
+                bands.forEach(band => {
+                    ctx.fillStyle = band.color;
+                    ctx.fillRect(0, band.y, canvas.width, band.height);
+                    
+                    // Add some texture/noise to the bands
+                    for (let i = 0; i < 1000; i++) {
+                        const x = Math.random() * canvas.width;
+                        const y = band.y + Math.random() * band.height;
+                        const size = Math.random() * 3 + 1;
+                        const alpha = Math.random() * 0.3;
+                        
+                        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                
+                // Convert canvas to texture
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+            
+            // Create a procedural ring texture with segments and gaps
+            function createRingTexture(type = 'standard') {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024;
+                canvas.height = 1024;
+                const ctx = canvas.getContext('2d');
+                
+                // Transparent background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const maxRadius = canvas.width / 2;
+                
+                // Ring composition data
+                // Each ring has different composition ratios
+                const ringComposition = {
+                    // Ring name: [% water ice, % silicates, % organics, % iron, particle size distribution (1-10)]
+                    'D': [90, 2, 5, 1, 2], // D Ring: mostly small particles
+                    'C': [92, 1.5, 4, 0.5, 3], // C Ring: small to medium particles
+                    'B': [95, 1, 3, 0.2, 7], // B Ring: larger particles, densest
+                    'cassini': [85, 5, 7, 1, 1], // Cassini Division: sparse, small particles
+                    'A': [93, 1, 4, 0.5, 6], // A Ring: medium-large particles
+                    'encke': [80, 8, 9, 2, 1], // Encke Gap: very sparse, small particles
+                    'F': [88, 3, 6, 1, 4], // F Ring: twisted, braided structure
+                    'G': [90, 2, 5, 1, 2], // G Ring: faint, mostly dust
+                    'E': [92, 1, 5, 0.5, 1]  // E Ring: very faint, mostly dust
+                };
+                
+                // Draw rings from outside in
+                const ringSegments = [
+                    {innerRad: 0.51, outerRad: 0.57, alpha: 0.7, color: '#E8DBC5', type: 'E'}, // E Ring
+                    {innerRad: 0.6, outerRad: 0.64, alpha: 0.8, color: '#E6D9C3', type: 'G'}, // G Ring
+                    {innerRad: 0.67, outerRad: 0.74, alpha: 0.9, color: '#E4D7C1', type: 'F'}, // F Ring
+                    {innerRad: 0.76, outerRad: 0.9, alpha: 0.95, color: '#E2D5BF', type: 'A'}, // A Ring
+                    {innerRad: 0.83, outerRad: 0.835, alpha: 0.2, color: '#000000', type: 'encke'}, // Encke gap
+                    {innerRad: 0.845, outerRad: 0.848, alpha: 0.1, color: '#000000', type: 'keeler'}, // Keeler gap
+                    {innerRad: 0.9, outerRad: 0.91, alpha: 0.2, color: '#000000', type: 'cassini'}, // Cassini Division
+                    {innerRad: 0.91, outerRad: 0.96, alpha: 0.9, color: '#E0D3BD', type: 'B'}, // B Ring
+                    {innerRad: 0.96, outerRad: 0.98, alpha: 0.7, color: '#DCCFB9', type: 'C'}, // C Ring
+                    {innerRad: 0.98, outerRad: 1, alpha: 0.5, color: '#D8CBB5', type: 'D'}, // D Ring
+                ];
+                
+                if (type === 'standard') {
+                    // Standard rendering
+                    ctx.globalCompositeOperation = 'source-over';
+                    ringSegments.forEach(ring => {
+                        const innerRadius = ring.innerRad * maxRadius;
+                        const outerRadius = ring.outerRad * maxRadius;
+                        
+                        // Create a radial gradient for each ring
+                        const gradient = ctx.createRadialGradient(
+                            centerX, centerY, innerRadius,
+                            centerX, centerY, outerRadius
+                        );
+                        
+                        gradient.addColorStop(0, `rgba(${hexToRgb(ring.color)}, 0)`);
+                        gradient.addColorStop(0.2, `rgba(${hexToRgb(ring.color)}, ${ring.alpha})`);
+                        gradient.addColorStop(0.8, `rgba(${hexToRgb(ring.color)}, ${ring.alpha})`);
+                        gradient.addColorStop(1, `rgba(${hexToRgb(ring.color)}, 0)`);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+                        ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2, true);
+                        ctx.fill();
+                        
+                        // Add some particle texture
+                        ctx.globalCompositeOperation = 'overlay';
+                        for (let i = 0; i < 5000; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = innerRadius + Math.random() * (outerRadius - innerRadius);
+                            const x = centerX + dist * Math.cos(angle);
+                            const y = centerY + dist * Math.sin(angle);
+                            const size = Math.random() * 1.5 + 0.5;
+                            
+                            ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.3})`;
+                            ctx.beginPath();
+                            ctx.arc(x, y, size, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.globalCompositeOperation = 'source-over';
+                    });
+                }
+                else if (type === 'composition') {
+                    // Composition visualization with color coding
+                    ringSegments.forEach(ring => {
+                        if (ring.type === 'encke' || ring.type === 'keeler') return; // Skip gaps
+                        
+                        const innerRadius = ring.innerRad * maxRadius;
+                        const outerRadius = ring.outerRad * maxRadius;
+                        const comp = ringComposition[ring.type];
+                        
+                        if (!comp) return;
+                        
+                        // Create composition-based coloring
+                        // Water ice (blue), silicates (gray), organics (red), iron (dark gray)
+                        const waterColor = [173, 216, 230]; // Light blue
+                        const silicateColor = [128, 128, 128]; // Gray
+                        const organicColor = [225, 150, 150]; // Reddish
+                        const ironColor = [70, 70, 70]; // Dark gray
+                        
+                        // Blend colors based on composition
+                        const r = (waterColor[0] * comp[0]/100) + (silicateColor[0] * comp[1]/100) + 
+                                (organicColor[0] * comp[2]/100) + (ironColor[0] * comp[3]/100);
+                        const g = (waterColor[1] * comp[0]/100) + (silicateColor[1] * comp[1]/100) + 
+                                (organicColor[1] * comp[2]/100) + (ironColor[1] * comp[3]/100);
+                        const b = (waterColor[2] * comp[0]/100) + (silicateColor[2] * comp[1]/100) + 
+                                (organicColor[2] * comp[2]/100) + (ironColor[2] * comp[3]/100);
+                        
+                        // Draw ring with composition color
+                        const gradient = ctx.createRadialGradient(
+                            centerX, centerY, innerRadius,
+                            centerX, centerY, outerRadius
+                        );
+                        
+                        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+                        gradient.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, ${ring.alpha})`);
+                        gradient.addColorStop(0.8, `rgba(${r}, ${g}, ${b}, ${ring.alpha})`);
+                        gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+                        ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2, true);
+                        ctx.fill();
+                        
+                        // Add composition indicators (tiny dots of component materials)
+                        // More dots for higher percentage components
+                        const totalParticles = 2000;
+                        const waterParticles = Math.floor(totalParticles * comp[0]/100);
+                        const silicateParticles = Math.floor(totalParticles * comp[1]/100);
+                        const organicParticles = Math.floor(totalParticles * comp[2]/100);
+                        const ironParticles = Math.floor(totalParticles * comp[3]/100);
+                        
+                        // Function to draw particles of a specific type
+                        function drawParticles(count, color, sizeFactor = 1) {
+                            for (let i = 0; i < count; i++) {
+                                const angle = Math.random() * Math.PI * 2;
+                                const dist = innerRadius + Math.random() * (outerRadius - innerRadius);
+                                const x = centerX + dist * Math.cos(angle);
+                                const y = centerY + dist * Math.sin(angle);
+                                const size = (Math.random() * 1.2 + 0.3) * sizeFactor;
+                                
+                                ctx.fillStyle = color;
+                                ctx.beginPath();
+                                ctx.arc(x, y, size, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                        
+                        // Draw different material particles
+                        drawParticles(waterParticles, 'rgba(173, 216, 230, 0.7)', comp[4]/5); // Water ice
+                        drawParticles(silicateParticles, 'rgba(128, 128, 128, 0.7)', comp[4]/4); // Silicates
+                        drawParticles(organicParticles, 'rgba(225, 150, 150, 0.7)', comp[4]/6); // Organics
+                        drawParticles(ironParticles, 'rgba(70, 70, 70, 0.7)', comp[4]/7); // Iron
+                    });
+                    
+                    // Add gap visualization
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.lineWidth = 2;
+                    
+                    // Encke Gap
+                    const enckeRadius = 0.83 * maxRadius;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, enckeRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Keeler Gap
+                    const keelerRadius = 0.845 * maxRadius;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, keelerRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Cassini Division
+                    const cassiniRadius = 0.9 * maxRadius;
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, cassiniRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                else if (type === 'particles') {
+                    // Particle size visualization
+                    const particleSizes = {
+                        'D': [0.3, 1.5], // μm to cm
+                        'C': [0.5, 3],   // cm to meter
+                        'B': [1, 5],     // meter to several meters
+                        'cassini': [0.2, 1], // small particles
+                        'A': [1, 4],     // meter sized
+                        'encke': [0.1, 0.5], // small particles
+                        'F': [0.5, 3],   // mixed sizes
+                        'G': [0.2, 1],   // mostly dust
+                        'E': [0.1, 0.8]  // very fine dust
+                    };
+                    
+                    // First draw faint ring outlines
+                    ctx.globalAlpha = 0.3;
+                    ringSegments.forEach(ring => {
+                        if (ring.type === 'encke' || ring.type === 'keeler') return;
+                        
+                        const innerRadius = ring.innerRad * maxRadius;
+                        const outerRadius = ring.outerRad * maxRadius;
+                        
+                        ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    });
+                    ctx.globalAlpha = 1.0;
+                    
+                    // Now draw particles sized by ring
+                    ringSegments.forEach(ring => {
+                        if (ring.type === 'encke' || ring.type === 'keeler') return;
+                        
+                        const innerRadius = ring.innerRad * maxRadius;
+                        const outerRadius = ring.outerRad * maxRadius;
+                        const sizes = particleSizes[ring.type] || [0.5, 2];
+                        const ringWidth = outerRadius - innerRadius;
+                        const density = ringComposition[ring.type] ? ringComposition[ring.type][4] * 50 : 200;
+                        
+                        // Draw individual particles
+                        for (let i = 0; i < density; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = innerRadius + Math.random() * ringWidth;
+                            const x = centerX + dist * Math.cos(angle);
+                            const y = centerY + dist * Math.sin(angle);
+                            
+                            // Size based on ring type, larger rings have larger particles
+                            const particleSize = sizes[0] + Math.random() * (sizes[1] - sizes[0]);
+                            
+                            // Color based on composition, but mostly ice
+                            const iceRatio = ringComposition[ring.type] ? ringComposition[ring.type][0]/100 : 0.9;
+                            const r = 220 - Math.random() * 40 * iceRatio;
+                            const g = 220 - Math.random() * 20 * iceRatio;
+                            const b = 230;
+                            
+                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                            ctx.beginPath();
+                            ctx.arc(x, y, particleSize, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    });
+                    
+                    // Draw gaps with red outlines
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.lineWidth = 2;
+                    
+                    // Encke Gap
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 0.83 * maxRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Keeler Gap
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 0.845 * maxRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Cassini Division
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 0.9 * maxRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Add labels
+                    ctx.fillStyle = 'white';
+                    ctx.font = '14px Arial';
+                    ctx.fillText('A Ring', centerX + 0.83 * maxRadius + 10, centerY);
+                    ctx.fillText('B Ring', centerX - 0.94 * maxRadius - 50, centerY);
+                    ctx.fillText('C Ring', centerX - 0.97 * maxRadius - 50, centerY);
+                    ctx.fillText('Cassini Division', centerX, centerY - 0.9 * maxRadius - 10);
+                }
+                
+                // Convert canvas to texture
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+            
+            // Helper function to convert hex color to RGB
+            function hexToRgb(hex) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `${r}, ${g}, ${b}`;
+            }
+            
+            function init3DScene() {
+                // Create scene, camera, and renderer
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000000);
+                
+                // Camera setup
+                const aspectRatio = container.clientWidth / container.clientHeight;
+                camera = new THREE.PerspectiveCamera(45, aspectRatio, 0.1, 1000);
+                camera.position.set(30, 20, 30);
+                
+                // Renderer setup
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                container.appendChild(renderer.domElement);
+                
+                // Add orbit controls
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.minDistance = 20;
+                controls.maxDistance = 100;
+                controls.update();
+                
+                // Add ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 1);
+                scene.add(ambientLight);
+                
+                // Add directional light (simulating sun)
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                directionalLight.position.set(50, 30, 50);
+                scene.add(directionalLight);
+                
+                // Create Saturn
+                const saturnGeometry = new THREE.SphereGeometry(SATURN_RADIUS, 64, 64);
+                const saturnMaterial = new THREE.MeshPhongMaterial({
+                    map: createSaturnTexture(),
+                    bumpScale: 0.1
+                });
+                saturn = new THREE.Mesh(saturnGeometry, saturnMaterial);
+                // Tilt Saturn
+                saturn.rotation.x = THREE.MathUtils.degToRad(27);
+                scene.add(saturn);
+                
+                // Create rings
+                createRings();
+                
+                // Window resize handler
+                window.addEventListener('resize', onWindowResize);
+                
+                // Add event listeners for controls
+                document.getElementById('highlight3D').addEventListener('change', updateRingHighlights);
+                document.getElementById('showMoons').addEventListener('change', updateMoons);
+                document.getElementById('viewAngle').addEventListener('change', updateViewAngle);
+                document.getElementById('showComposition').addEventListener('change', createRings);
+                
+                // Initialize moons setting (none by default)
+                updateMoons();
+                
+                // Start animation loop
+                animate();
+            }
+            
+            function createRings() {
+                // Clear existing rings
+                rings.forEach(ring => scene.remove(ring));
+                rings = [];
+                
+                // Get the current composition view type
+                const compositionView = document.getElementById('showComposition').value;
+                
+                // Create main rings
+                const ringGeometry = new THREE.RingGeometry(RING_INNER_RADIUS, RING_OUTER_RADIUS, 128, 3);
+                const ringMaterial = new THREE.MeshPhongMaterial({
+                    map: createRingTexture(compositionView),
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    alphaTest: 0.1
+                });
+                
+                const mainRing = new THREE.Mesh(ringGeometry, ringMaterial);
+                mainRing.rotation.x = Math.PI / 2; // Align with Saturn's equator
+                mainRing.rotation.y = THREE.MathUtils.degToRad(27); // Match Saturn's tilt
+                scene.add(mainRing);
+                rings.push(mainRing);
+                
+                // Create ring shadow (simplified)
+                const shadowGeometry = new THREE.PlaneGeometry(RING_OUTER_RADIUS * 2, RING_OUTER_RADIUS * 2);
+                const shadowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x000000,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                
+                const ringShadow = new THREE.Mesh(shadowGeometry, shadowMaterial);
+                ringShadow.position.y = -SATURN_RADIUS * 0.1; // Slightly below Saturn
+                ringShadow.rotation.x = Math.PI / 2;
+                ringShadow.rotation.y = THREE.MathUtils.degToRad(27);
+                scene.add(ringShadow);
+                rings.push(ringShadow);
+                
+                // Show or hide the composition legend based on view type
+                const compositionLegend = document.getElementById('compositionLegend');
+                if (compositionView === 'composition' || compositionView === 'particles') {
+                    compositionLegend.classList.remove('hidden');
+                } else {
+                    compositionLegend.classList.add('hidden');
+                }
+            }
+            
+            function updateRingHighlights() {
+                const highlightType = document.getElementById('highlight3D').value;
+                
+                // Remove any existing highlights
+                scene.children.forEach(child => {
+                    if (child.userData && child.userData.isHighlight) {
+                        scene.remove(child);
+                    }
+                });
+                
+                if (highlightType === 'none') return;
+                
+                const gapData = RING_GAPS[highlightType];
+                if (!gapData) return;
+                
+                // Create a highlight for the selected gap
+                const gapGeometry = new THREE.RingGeometry(
+                    gapData.radius - gapData.width/2,
+                    gapData.radius + gapData.width/2,
+                    64, 3
+                );
+                
+                const gapMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const gapHighlight = new THREE.Mesh(gapGeometry, gapMaterial);
+                gapHighlight.rotation.x = Math.PI / 2;
+                gapHighlight.rotation.y = THREE.MathUtils.degToRad(27);
+                gapHighlight.userData = { isHighlight: true };
+                
+                // Add Text label (using a sprite)
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px Arial';
+                ctx.fillText(`${gapData.name} (${gapData.resonance})`, 5, 20);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.set(gapData.radius + gapData.width, 2, 0);
+                sprite.scale.set(5, 1.25, 1);
+                sprite.userData = { isHighlight: true };
+                
+                scene.add(gapHighlight);
+                scene.add(sprite);
+            }
+            
+            function updateMoons() {
+                const moonSetting = document.getElementById('showMoons').value;
+                
+                // Remove all existing moons
+                Object.values(moons).forEach(moon => {
+                    if (moon.parent) {
+                        moon.parent.remove(moon);
+                    }
+                });
+                moons = {};
+                
+                if (moonSetting === 'none') return;
+                
+                // Create moons based on setting
+                let moonsToShow = [];
+                if (moonSetting === 'mimas') {
+                    moonsToShow = ['mimas'];
+                } else if (moonSetting === 'all') {
+                    moonsToShow = Object.keys(MOON_DATA);
+                }
+                
+                moonsToShow.forEach(moonName => {
+                    const moonData = MOON_DATA[moonName];
+                    
+                    // Create moon geometry
+                    const moonGeometry = new THREE.SphereGeometry(moonData.size, 32, 32);
+                    const moonMaterial = new THREE.MeshPhongMaterial({ color: moonData.color });
+                    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+                    
+                    // Create orbit path
+                    const orbitGeometry = new THREE.RingGeometry(moonData.distance - 0.1, moonData.distance + 0.1, 64, 1);
+                    const orbitMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0x555555, 
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+                    orbit.rotation.x = Math.PI / 2;
+                    
+                    // Group to manage moon and its orbit
+                    const moonGroup = new THREE.Group();
+                    moonGroup.add(orbit);
+                    moonGroup.add(moon);
+                    moonGroup.rotation.x = THREE.MathUtils.degToRad(27); // Match Saturn's tilt
+                    
+                    // Position moon on its orbit
+                    moon.position.set(moonData.distance, 0, 0);
+                    
+                    // Add moon data for animation
+                    moonGroup.userData = { 
+                        period: moonData.period,
+                        name: moonName
+                    };
+                    
+                    scene.add(moonGroup);
+                    moons[moonName] = moonGroup;
+                });
+            }
+            
+            function updateViewAngle() {
+                const angleType = document.getElementById('viewAngle').value;
+                
+                switch(angleType) {
+                    case 'above':
+                        // 45-degree view
+                        controls.reset();
+                        camera.position.set(30, 20, 30);
+                        break;
+                    case 'edge':
+                        // Edge-on view
+                        controls.reset();
+                        camera.position.set(30, 0, 0);
+                        break;
+                    case 'top':
+                        // Top-down view
+                        controls.reset();
+                        camera.position.set(0, 40, 0);
+                        break;
+                }
+                
+                controls.update();
+            }
+            
+            function onWindowResize() {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                
+                renderer.setSize(width, height);
+            }
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Update controls
+                controls.update();
+                
+                // Animate moons
+                const time = Date.now() * 0.001;
+                Object.values(moons).forEach(moonGroup => {
+                    const period = moonGroup.userData.period;
+                    moonGroup.rotation.y = (time / period) * Math.PI * 2;
+                });
+                
+                // Render the scene
+                renderer.render(scene, camera);
+            }
+            
+            // Initialize the 3D scene
+            init3DScene();
+
+            // LINDBLAD RESONANCE CHART
+            const resonanceChart = document.getElementById('resonanceChart');
+            let scatterChart;
+
+            function createResonanceChart(strength, width) {
+                const numParticles = 5000;
+                const a = Array.from({length: numParticles}, (_, i) => 117000 + (118000 - 117000) * (i / (numParticles - 1)));
+                const e = Array.from({length: numParticles}, () => 0.001 * Math.random());
+                
+                const aResonance = 117580; // Cassini Division location
+                const strengthFactor = strength * 1e-7;
+                const resonanceStrength = a.map(val => 
+                    strengthFactor * Math.exp(-Math.pow(val - aResonance, 2) / (2 * Math.pow(width, 2))));
+                
+                const ePerturbed = e.map((val, i) => 
+                    val + resonanceStrength[i] * Math.sin(2 * Math.PI * (a[i] - aResonance) / 100));
+                
+                const data = a.map((val, i) => ({
+                    x: val,
+                    y: ePerturbed[i],
+                    r: 2,
+                    color: resonanceStrength[i]
+                }));
+                
+                const ctx = resonanceChart.getContext('2d');
+                
+                // If a chart already exists, destroy it first
+                if (scatterChart) {
+                    scatterChart.destroy();
+                }
+                
+                scatterChart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Ring Particles',
+                            data: data,
+                            backgroundColor: data.map(d => `rgba(93, 92, 222, ${Math.min(d.color * 10000, 1)})`),
+                            pointRadius: 2,
+                        }]
+                    },
+                    options: {
+                        animation: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Semi-Major Axis (km)'
+                                },
+                                min: 117000,
+                                max: 118000,
+                                grid: {
+                                    color: 'rgba(150, 150, 150, 0.2)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Eccentricity'
+                                },
+                                min: 0,
+                                max: 0.0025,
+                                grid: {
+                                    color: 'rgba(150, 150, 150, 0.2)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Radius: ${context.raw.x.toFixed(0)} km, Ecc: ${context.raw.y.toFixed(6)}`;
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        xMin: aResonance,
+                                        xMax: aResonance,
+                                        borderColor: 'red',
+                                        borderWidth: 2,
+                                        label: {
+                                            display: true,
+                                            content: '2:1 Resonance with Mimas',
+                                            position: 'start'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            document.getElementById('runSimulation').addEventListener('click', function() {
+                const strength = parseInt(document.getElementById('resonanceStrength').value);
+                const width = parseInt(document.getElementById('resonanceWidth').value);
+                createResonanceChart(strength, width);
+            });
+            
+            // Initialize the chart with default values
+            createResonanceChart(50, 500);
+
+            // SATURN RINGS VISUALIZATION (2D)
+            const ringsContainer = document.getElementById('ringsContainer');
+            const saturnContainer = document.getElementById('saturnContainer');
+            const viewToggle = document.getElementById('viewToggle');
+            
+            function createRingStructure() {
+                // Clear previous rings
+                while (ringsContainer.firstChild) {
+                    ringsContainer.removeChild(ringsContainer.firstChild);
+                }
+                
+                const view = viewToggle.value;
+                let ringData = [];
+                
+                // Set up the ring data for different views
+                if (view === 'full') {
+                    // Full rings configuration
+                    ringData = [
+                        { innerRadius: '45%', outerRadius: '50%', opacity: 0.5, type: 'D' },
+                        { innerRadius: '50%', outerRadius: '55%', opacity: 0.7, type: 'C' },
+                        { innerRadius: '55%', outerRadius: '60%', opacity: 0.9, type: 'B' },
+                        { innerRadius: '60%', outerRadius: '61%', opacity: 0.1, type: 'cassini' },
+                        { innerRadius: '61%', outerRadius: '70%', opacity: 0.8, type: 'A' },
+                        { innerRadius: '66%', outerRadius: '66.5%', opacity: 0.1, type: 'encke' },
+                        { innerRadius: '73%', outerRadius: '75%', opacity: 0.5, type: 'F' },
+                        { innerRadius: '78%', outerRadius: '80%', opacity: 0.3, type: 'G' },
+                    ];
+                } else if (view === 'cassini') {
+                    // Cassini Division detailed view
+                    ringData = [
+                        { innerRadius: '40%', outerRadius: '59%', opacity: 0.9, type: 'B' },
+                        { innerRadius: '59%', outerRadius: '62%', opacity: 0.1, type: 'cassini' },
+                        { innerRadius: '62%', outerRadius: '80%', opacity: 0.8, type: 'A' },
+                    ];
+                } else if (view === 'encke') {
+                    // Encke Gap detailed view
+                    ringData = [
+                        { innerRadius: '40%', outerRadius: '65%', opacity: 0.8, type: 'A' },
+                        { innerRadius: '65%', outerRadius: '67%', opacity: 0.1, type: 'encke' },
+                        { innerRadius: '67%', outerRadius: '80%', opacity: 0.8, type: 'A' },
+                    ];
+                }
+                
+                // Create the rings
+                ringData.forEach(ring => {
+                    const ringElement = document.createElement('div');
+                    ringElement.className = 'absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full';
+                    ringElement.style.width = ring.outerRadius;
+                    ringElement.style.height = ring.outerRadius;
+                    
+                    // Different styling based on ring type
+                    if (ring.type === 'cassini' || ring.type === 'encke') {
+                        ringElement.style.border = `calc(${ring.outerRadius} - ${ring.innerRadius}) solid rgba(30, 30, 30, ${ring.opacity})`;
+                    } else {
+                        ringElement.style.border = `calc(${ring.outerRadius} - ${ring.innerRadius}) solid rgba(232, 219, 197, ${ring.opacity})`;
+                    }
+                    
+                    // Add specific features to some rings
+                    if (ring.type === 'cassini') {
+                        ringElement.setAttribute('data-tooltip', 'Cassini Division (2:1 resonance with Mimas)');
+                        // Add Mimas indicator
+                        if (view === 'cassini') {
+                            const mimas = document.createElement('div');
+                            mimas.className = 'absolute w-4 h-4 bg-mimas rounded-full animate-orbit';
+                            mimas.style.top = 'calc(50% - 2px)';
+                            mimas.style.left = 'calc(90% - 2px)';
+                            ringElement.appendChild(mimas);
+                        }
+                    } else if (ring.type === 'encke') {
+                        ringElement.setAttribute('data-tooltip', 'Encke Gap (1:1 resonance with Pan)');
+                        // Add Pan indicator
+                        if (view === 'encke') {
+                            const pan = document.createElement('div');
+                            pan.className = 'absolute w-2 h-2 bg-mimas rounded-full animate-orbit-fast';
+                            pan.style.top = 'calc(50% - 1px)';
+                            pan.style.left = 'calc(66% - 1px)';
+                            ringElement.appendChild(pan);
+                        }
+                    }
+                    
+                    ringsContainer.appendChild(ringElement);
+                });
+                
+                // Animation classes for moons
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes orbit {
+                        from { transform: rotate(0deg) translateX(90%) rotate(0deg); }
+                        to { transform: rotate(360deg) translateX(90%) rotate(-360deg); }
+                    }
+                    @keyframes orbit-fast {
+                        from { transform: rotate(0deg) translateX(66%) rotate(0deg); }
+                        to { transform: rotate(360deg) translateX(66%) rotate(-360deg); }
+                    }
+                    .animate-orbit {
+                        animation: orbit 20s linear infinite;
+                        transform-origin: center;
+                    }
+                    .animate-orbit-fast {
+                        animation: orbit-fast 10s linear infinite;
+                        transform-origin: center;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            viewToggle.addEventListener('change', createRingStructure);
+            
+            // Initialize with full rings view
+            createRingStructure();
+        });
+    </script>
+</body>
+</html>
