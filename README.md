@@ -2,9 +2,6 @@
 
 An interactive 3D visualization of Saturn's rings that demonstrates the cosmic dance of gravity, chaos, and orbital resonances. This educational tool allows users to explore the relationship between Saturn's moons and the structure of its iconic rings.
 
-[**Explore the Live Demo**](https://YOUR-USERNAME.github.io/saturn-rings-visualization)
-
-![Saturn's Rings Visualization](screenshot-url-here)
 
 ## Features
 
